@@ -1,14 +1,14 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, use } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { allTopics } from '@/data';
 import { Dialog, DialogLine } from '@/data/types';
 import { cn } from '@/lib/cn';
-import { ChevronRight, Volume2, Eye, EyeOff, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
-import { markItemComplete, getContextProgress } from '@/lib/progress';
-import { useSpeech } from '@/lib/useSpeech';
+import { ChevronRight, Volume2, Eye, EyeOff, CheckCircle2, ChevronDown, ChevronUp, Play, Square } from 'lucide-react';
+import { markItemComplete, getContextProgress, useProgress } from '@/lib/progress';
+import { useSpeech, useSpeechQueue } from '@/lib/useSpeech';
 
 type Params = Promise<{ topicId: string; contextId: string }>;
 
@@ -28,17 +28,21 @@ function SpeakButton({ text, size = 14 }: { text: string; size?: number }) {
 function DialogCard({ dialog, topicId, contextId }: { dialog: Dialog; topicId: string; contextId: string }) {
   const [showVietnamese, setShowVietnamese] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  useEffect(() => {
-    const progress = getContextProgress(topicId, contextId, 'listening');
-    if (progress?.completedItems.includes(dialog.id)) setCompleted(true);
-  }, []);
+  const completed = getContextProgress(topicId, contextId, 'listening', useProgress())?.completedItems.includes(dialog.id) ?? false;
+  const { playAll, stop, currentIndex, playing } = useSpeechQueue();
 
-  const visibleLines = expanded ? dialog.lines : dialog.lines.slice(0, 4);
+  const visibleLines = expanded || playing ? dialog.lines : dialog.lines.slice(0, 4);
+
+  function handlePlayAll() {
+    if (playing) {
+      stop();
+      return;
+    }
+    playAll(dialog.lines.map((line) => ({ text: line.text, voiceSlot: line.speaker === 'you' ? 1 : 0 })));
+  }
 
   function handleComplete() {
     markItemComplete(topicId, contextId, 'listening', dialog.id, 100);
-    setCompleted(true);
   }
 
   const levelColor = dialog.level <= 2 ? 'text-green-400 bg-green-500/10' : dialog.level <= 3 ? 'text-yellow-400 bg-yellow-500/10' : 'text-red-400 bg-red-500/10';
@@ -57,13 +61,27 @@ function DialogCard({ dialog, topicId, contextId }: { dialog: Dialog; topicId: s
             <h3 className="font-bold text-white text-lg">{dialog.titleVi}</h3>
             <p className="text-sm text-white/50 mt-0.5">{dialog.situationVi}</p>
           </div>
-          <button
-            onClick={() => setShowVietnamese(!showVietnamese)}
-            className="flex-shrink-0 flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg"
-          >
-            {showVietnamese ? <EyeOff size={14} /> : <Eye size={14} />}
-            {showVietnamese ? 'Ẩn dịch' : 'Hiện dịch'}
-          </button>
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <button
+              onClick={handlePlayAll}
+              className={cn(
+                'flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg transition-colors border',
+                playing
+                  ? 'text-red-400 bg-red-500/10 hover:bg-red-500/20 border-red-500/20'
+                  : 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/20'
+              )}
+            >
+              {playing ? <Square size={14} /> : <Play size={14} />}
+              {playing ? 'Dừng' : 'Phát tất cả'}
+            </button>
+            <button
+              onClick={() => setShowVietnamese(!showVietnamese)}
+              className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg"
+            >
+              {showVietnamese ? <EyeOff size={14} /> : <Eye size={14} />}
+              {showVietnamese ? 'Ẩn dịch' : 'Hiện dịch'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -82,10 +100,11 @@ function DialogCard({ dialog, topicId, contextId }: { dialog: Dialog; topicId: s
               line.speaker === 'you' ? 'items-end flex flex-col' : 'items-start flex flex-col'
             )}>
               <div className={cn(
-                'rounded-2xl px-4 py-3 text-sm',
+                'rounded-2xl px-4 py-3 text-sm transition-shadow',
                 line.speaker === 'you'
                   ? 'bg-amber-500/20 text-white rounded-tr-sm border border-amber-500/10'
-                  : 'bg-white/10 text-white rounded-tl-sm border border-white/5'
+                  : 'bg-white/10 text-white rounded-tl-sm border border-white/5',
+                currentIndex === i && 'ring-2 ring-blue-400/70'
               )}>
                 <p className="leading-relaxed">{line.text}</p>
               </div>
@@ -99,7 +118,7 @@ function DialogCard({ dialog, topicId, contextId }: { dialog: Dialog; topicId: s
           </div>
         ))}
 
-        {dialog.lines.length > 4 && (
+        {dialog.lines.length > 4 && !playing && (
           <button
             onClick={() => setExpanded(!expanded)}
             className="w-full flex items-center justify-center gap-2 text-sm text-white/40 hover:text-white transition-colors py-2 border border-dashed border-white/10 hover:border-white/30 rounded-xl"

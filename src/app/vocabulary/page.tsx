@@ -103,15 +103,25 @@ function FlashCard({ item, onNext, onPrev, index, total }: {
   );
 }
 
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function buildOptions(items: VocabularyItem[], qIndex: number): string[] {
+  const item = items[qIndex];
+  const wrong = shuffle(items.filter((i) => i.id !== item.id)).slice(0, 3);
+  return shuffle([...wrong.map((i) => i.definitionVi), item.definitionVi]);
+}
+
 function QuizMode({ items }: { items: VocabularyItem[] }) {
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [score, setScore] = useState(0);
   const [finished, setFinished] = useState(false);
+  // Shuffle once per question so options don't jump around on re-render
+  const [options, setOptions] = useState(() => buildOptions(items, 0));
 
   const item = items[qIndex];
-  const wrong = items.filter((i) => i.id !== item.id).sort(() => Math.random() - 0.5).slice(0, 3);
-  const options = [...wrong.map((i) => i.definitionVi), item.definitionVi].sort(() => Math.random() - 0.5);
 
   function handleAnswer(ans: string) {
     if (selected) return;
@@ -123,13 +133,15 @@ function QuizMode({ items }: { items: VocabularyItem[] }) {
     if (qIndex + 1 >= items.length) {
       setFinished(true);
     } else {
-      setQIndex((i) => i + 1);
+      setQIndex(qIndex + 1);
+      setOptions(buildOptions(items, qIndex + 1));
       setSelected(null);
     }
   }
 
   function restart() {
     setQIndex(0);
+    setOptions(buildOptions(items, 0));
     setSelected(null);
     setScore(0);
     setFinished(false);

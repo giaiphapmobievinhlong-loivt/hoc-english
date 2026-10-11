@@ -15,7 +15,7 @@ import {
   RotateCcw,
   ArrowRight,
 } from 'lucide-react';
-import { markItemComplete, getContextProgress } from '@/lib/progress';
+import { markItemComplete, getContextProgress, useProgress } from '@/lib/progress';
 
 type Params = Promise<{ topicId: string; contextId: string }>;
 type Phase = 'reading' | 'quiz' | 'done';
@@ -65,10 +65,7 @@ function PassageCard({
   onNext: () => void;
   isLast: boolean;
 }) {
-  const alreadyDone = (() => {
-    const progress = getContextProgress(topicId, contextId, 'reading');
-    return progress?.completedItems.includes(passage.id) ?? false;
-  })();
+  const alreadyDone = getContextProgress(topicId, contextId, 'reading', useProgress())?.completedItems.includes(passage.id) ?? false;
 
   const [phase, setPhase] = useState<Phase>(alreadyDone ? 'done' : 'reading');
   const [questionIdx, setQuestionIdx] = useState(0);
@@ -276,9 +273,9 @@ export default function ReadingPage({ params }: { params: Params }) {
   const passages = ctx.readingPassages;
   const [passageIdx, setPassageIdx] = useState(0);
 
+  const progress = useProgress();
   function getCompletedIds() {
-    const progress = getContextProgress(topicId, contextId, 'reading');
-    return progress?.completedItems ?? [];
+    return getContextProgress(topicId, contextId, 'reading', progress)?.completedItems ?? [];
   }
 
   if (passages.length === 0) {

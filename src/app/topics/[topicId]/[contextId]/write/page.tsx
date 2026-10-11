@@ -15,7 +15,7 @@ import {
   Lightbulb,
   RotateCcw,
 } from 'lucide-react';
-import { markItemComplete, getContextProgress } from '@/lib/progress';
+import { markItemComplete, getContextProgress, useProgress } from '@/lib/progress';
 
 type Params = Promise<{ topicId: string; contextId: string }>;
 
@@ -62,10 +62,7 @@ function PromptCard({
   onNext: () => void;
   isLast: boolean;
 }) {
-  const alreadyDone = (() => {
-    const progress = getContextProgress(topicId, contextId, 'writing');
-    return progress?.completedItems.includes(prompt.id) ?? false;
-  })();
+  const alreadyDone = getContextProgress(topicId, contextId, 'writing', useProgress())?.completedItems.includes(prompt.id) ?? false;
 
   const [userText, setUserText] = useState('');
   const [showSample, setShowSample] = useState(false);
@@ -230,9 +227,9 @@ export default function WritingPage({ params }: { params: Params }) {
   const prompts = ctx.writingPrompts;
   const [promptIdx, setPromptIdx] = useState(0);
 
+  const progress = useProgress();
   function getCompletedIds() {
-    const progress = getContextProgress(topicId, contextId, 'writing');
-    return progress?.completedItems ?? [];
+    return getContextProgress(topicId, contextId, 'writing', progress)?.completedItems ?? [];
   }
 
   if (prompts.length === 0) {

@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getOverallStats, getTotalItemsCompleted, getStudyStreak } from '@/lib/progress';
+import { getOverallStats, getTotalItemsCompleted, getStudyStreak, useProgress } from '@/lib/progress';
 import { allTopics } from '@/data';
 import { Headphones, Mic, FileText, PenLine, BookOpen, Flame, Star, Target } from 'lucide-react';
 import { cn } from '@/lib/cn';
@@ -15,15 +14,10 @@ const skillConfig = {
 };
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState(getOverallStats());
-  const [totalItems, setTotalItems] = useState(0);
-  const [streak, setStreak] = useState(0);
-
-  useEffect(() => {
-    setStats(getOverallStats());
-    setTotalItems(getTotalItemsCompleted());
-    setStreak(getStudyStreak());
-  }, []);
+  const progress = useProgress();
+  const stats = getOverallStats(progress);
+  const totalItems = getTotalItemsCompleted(progress);
+  const streak = getStudyStreak(progress);
 
   const topic = allTopics[0];
   const totalContexts = topic.contexts.length;

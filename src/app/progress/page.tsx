@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getOverallStats, getProgress, getTotalItemsCompleted, getStudyStreak } from '@/lib/progress';
+import { getOverallStats, getTotalItemsCompleted, getStudyStreak, useProgress } from '@/lib/progress';
 import { allTopics } from '@/data';
 import { cn } from '@/lib/cn';
 import { Headphones, Mic, FileText, PenLine, Flame, Trophy, Target, Calendar } from 'lucide-react';
@@ -14,22 +13,10 @@ const skillConfig = {
 };
 
 export default function ProgressPage() {
-  const [stats, setStats] = useState<ReturnType<typeof getOverallStats>>(() => [
-    { skill: 'listening' as const, average: 0, sessionsCompleted: 0 },
-    { skill: 'speaking' as const, average: 0, sessionsCompleted: 0 },
-    { skill: 'reading' as const, average: 0, sessionsCompleted: 0 },
-    { skill: 'writing' as const, average: 0, sessionsCompleted: 0 },
-  ]);
-  const [allProgress, setAllProgress] = useState<ReturnType<typeof getProgress>>([]);
-  const [totalItems, setTotalItems] = useState(0);
-  const [streak, setStreak] = useState(0);
-
-  useEffect(() => {
-    setStats(getOverallStats());
-    setAllProgress(getProgress());
-    setTotalItems(getTotalItemsCompleted());
-    setStreak(getStudyStreak());
-  }, []);
+  const allProgress = useProgress();
+  const stats = getOverallStats(allProgress);
+  const totalItems = getTotalItemsCompleted(allProgress);
+  const streak = getStudyStreak(allProgress);
 
   const overallAvg = stats.length > 0 ? Math.round(stats.reduce((s, x) => s + x.average, 0) / stats.length) : 0;
 
